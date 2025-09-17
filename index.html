@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Code Tester</title>
+<style>
+  body { font-family: Arial; background:#f0f0f0; margin:20px; display:flex; flex-direction:column; align-items:center; }
+  h1 { margin-bottom:10px; }
+  #slots { display:flex; gap:10px; margin-bottom:10px; }
+  .slot {
+    width:40px; height:40px; border-radius:50%; background:#ccc; display:flex; justify-content:center; align-items:center; cursor:pointer;
+    font-weight:bold; font-size:16px; user-select:none; border:3px solid transparent;
+  }
+  .slot.selected { border:3px solid limegreen; }
+  textarea { width:90%; height:200px; font-family: monospace; font-size:14px; padding:10px; margin-bottom:10px; }
+  button { padding:10px 20px; margin:5px; cursor:pointer; }
+  iframe { width:90%; height:300px; border:1px solid #ccc; margin-top:10px; }
+</style>
+</head>
+<body>
+
+<h1>Code Tester - By Vewerty Ploik</h1>
+
+<div id="slots">
+  <div class="slot selected" onclick="selectSlot(1)">1</div>
+  <div class="slot" onclick="selectSlot(2)">2</div>
+  <div class="slot" onclick="selectSlot(3)">3</div>
+  <div class="slot" onclick="selectSlot(4)">4</div>
+  <div class="slot" onclick="selectSlot(5)">5</div>
+  <div class="slot" onclick="selectSlot(6)">6</div>
+</div>
+
+<textarea id="editor" placeholder="Write your HTML/CSS/JS code here..."></textarea>
+<div>
+  <button onclick="runCode()">Run Code</button>
+  <button onclick="clearCode()">Clear Code</button>
+</div>
+
+<iframe id="output"></iframe>
+
+<script>
+let currentSlot = 1;
+
+// Load the code for the selected slot
+window.onload = () => {
+  loadSlot(currentSlot);
+};
+
+// Function to select a slot
+function selectSlot(slot) {
+  saveSlot(currentSlot); // Save current code before switching
+  currentSlot = slot;
+  // Update slot highlighting
+  document.querySelectorAll('.slot').forEach(el => el.classList.remove('selected'));
+  document.querySelectorAll('.slot')[slot-1].classList.add('selected');
+  loadSlot(currentSlot);
+}
+
+// Save current editor content to localStorage
+function saveSlot(slot) {
+  const code = document.getElementById('editor').value;
+  localStorage.setItem('slot'+slot, code);
+}
+
+// Load code from a slot
+function loadSlot(slot) {
+  const saved = localStorage.getItem('slot'+slot);
+  document.getElementById('editor').value = saved || '';
+  document.getElementById('output').srcdoc = ''; // clear iframe
+}
+
+// Run code
+function runCode() {
+  const code = document.getElementById('editor').value;
+  localStorage.setItem('slot'+currentSlot, code); // Save current slot
+  document.getElementById('output').srcdoc = code;
+}
+
+// Clear code for current slot
+function clearCode() {
+  document.getElementById('editor').value = '';
+  document.getElementById('output').srcdoc = '';
+  localStorage.removeItem('slot'+currentSlot);
+}
+</script>
+
+</body>
+</html>
