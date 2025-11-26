@@ -5,33 +5,111 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Code Tester</title>
 <style>
-  body { font-family: Arial; background:#f0f0f0; margin:20px; display:flex; flex-direction:column; align-items:center; }
-  h1 { margin-bottom:10px; }
-  #slots { display:flex; gap:10px; margin-bottom:10px; }
-  .slot {
-    width:40px; height:40px; border-radius:50%; background:#ccc; display:flex; justify-content:center; align-items:center; cursor:pointer;
-    font-weight:bold; font-size:16px; user-select:none; border:3px solid transparent;
+  body {
+    font-family: Arial;
+    background:#f0f0f0;
+    margin:20px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
   }
-  .slot.selected { border:3px solid limegreen; }
-  textarea { width:90%; height:200px; font-family: monospace; font-size:14px; padding:10px; margin-bottom:10px; }
+
+  h1 { margin-bottom:5px; }
+
+  #instructions {
+    font-size:14px;
+    margin-bottom:15px;
+    text-align:center;
+    max-width:600px;
+  }
+
+  #slots {
+    display:flex;
+    gap:15px;
+    margin-bottom:10px;
+    overflow-x:auto;
+    padding:10px;
+    width:95%;
+    white-space:nowrap;
+  }
+
+  .slot-wrap {
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    position:relative;
+  }
+
+  .slot-name {
+    font-size:12px;
+    margin-bottom:3px;
+    font-weight:bold;
+    height:14px;
+  }
+
+  .dot {
+    width:10px;
+    height:10px;
+    border-radius:50%;
+    background:transparent;
+    margin-bottom:3px;
+  }
+
+  .dot.used { background:blue; }
+
+  .slot {
+    width:45px;
+    height:45px;
+    border-radius:50%;
+    background:#ccc;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    cursor:pointer;
+    font-weight:bold;
+    font-size:16px;
+    user-select:none;
+    border:3px solid transparent;
+  }
+
+  .slot.selected {
+    border:3px solid limegreen;
+  }
+
+  textarea {
+    width:95%;
+    height:220px;
+    font-family: monospace;
+    font-size:14px;
+    padding:10px;
+    margin-bottom:10px;
+  }
+
   button { padding:10px 20px; margin:5px; cursor:pointer; }
-  iframe { width:90%; height:600px; border:1px solid #ccc; margin-top:10px; background:white; }
+
+  iframe {
+    width:95%;
+    height:750px;
+    border:1px solid #ccc;
+    margin-top:10px;
+    background:white;
+  }
 </style>
 </head>
 <body>
 
-<h1>Code Tester - By Vewerty Ploik</h1>
-
-<div id="slots">
-  <div class="slot selected" onclick="selectSlot(1)">1</div>
-  <div class="slot" onclick="selectSlot(2)">2</div>
-  <div class="slot" onclick="selectSlot(3)">3</div>
-  <div class="slot" onclick="selectSlot(4)">4</div>
-  <div class="slot" onclick="selectSlot(5)">5</div>
-  <div class="slot" onclick="selectSlot(6)">6</div>
+<h1>Code Tester</h1>
+<div id="instructions">
+  🔹 Tap a slot to switch code<br>
+  🔹 <b>Double-tap</b> a slot to rename it (max 10 characters)<br>
+  🔹 Blue dot = slot has saved code<br>
+  🔹 Everything saves automatically
 </div>
 
+<div id="slots"></div>
+
 <textarea id="editor" placeholder="Write your HTML/CSS/JS code here..."></textarea>
+
 <div>
   <button onclick="runCode()">Run Code</button>
   <button onclick="clearCode()">Clear Code</button>
@@ -42,57 +120,115 @@
 
 <script>
 let currentSlot = 1;
+let lastTapTime = 0;
 
-// Load the code for the selected slot
+// Build 50 slots
 window.onload = () => {
-  loadSlot(currentSlot);
+  const container = document.getElementById("slots");
+
+  for (let i = 1; i <= 50; i++) {
+    const name = localStorage.getItem("name"+i) || "";
+
+    container.innerHTML += `
+      <div class="slot-wrap" onclick="slotTap(${i})">
+        <div class="slot-name" id="name${i}">${name}</div>
+        <div class="dot" id="dot${i}"></div>
+        <div class="slot" id="slot${i}">${i}</div>
+      </div>
+    `;
+  }
+
+  loadSlot(1);
+  updateDots();
 };
 
-// Function to select a slot
-function selectSlot(slot) {
-  saveSlot(currentSlot); // Save current code before switching
-  currentSlot = slot;
-  // Update slot highlighting
-  document.querySelectorAll('.slot').forEach(el => el.classList.remove('selected'));
-  document.querySelectorAll('.slot')[slot-1].classList.add('selected');
-  loadSlot(currentSlot);
+// Tap / Double-tap detection
+function slotTap(slot) {
+  const now = Date.now();
+
+  if (now - lastTapTime < 300) {
+    renameSlot(slot);
+  } else {
+    selectSlot(slot);
+  }
+
+  lastTapTime = now;
 }
 
-// Save current editor content to localStorage
+// Rename slot
+function renameSlot(slot) {
+  let newName = prompt("Enter a name (max 10 chars):", localStorage.getItem("name"+slot) || "");
+
+  if (newName === null) return;
+  newName = newName.trim().slice(0, 10);
+
+  localStorage.setItem("name"+slot, newName);
+  document.getElementById("name"+slot).textContent = newName;
+}
+
+// Select slot
+function selectSlot(slot) {
+  saveSlot(currentSlot);
+  currentSlot = slot;
+
+  document.querySelectorAll(".slot").forEach(el => el.classList.remove("selected"));
+  document.getElementById("slot"+slot).classList.add("selected");
+
+  loadSlot(slot);
+  updateDots();
+}
+
+// Save code
 function saveSlot(slot) {
   const code = document.getElementById('editor').value;
-  localStorage.setItem('slot'+slot, code);
+  localStorage.setItem("slot"+slot, code);
 }
 
-// Load code from a slot
+// Load code
 function loadSlot(slot) {
-  const saved = localStorage.getItem('slot'+slot);
-  document.getElementById('editor').value = saved || '';
-  document.getElementById('output').srcdoc = ''; // clear iframe
+  const saved = localStorage.getItem("slot"+slot);
+  document.getElementById("editor").value = saved || "";
+  document.getElementById("output").srcdoc = "";
+  localStorage.setItem("lastUsed", slot);
+}
+
+// Update blue dots
+function updateDots() {
+  for (let i = 1; i <= 50; i++) {
+    const dot = document.getElementById("dot"+i);
+    if (localStorage.getItem("slot"+i)) {
+      dot.classList.add("used");
+    } else {
+      dot.classList.remove("used");
+    }
+  }
 }
 
 // Run code
 function runCode() {
   const code = document.getElementById('editor').value;
-  localStorage.setItem('slot'+currentSlot, code); // Save current slot
+  localStorage.setItem("slot"+currentSlot, code);
   document.getElementById('output').srcdoc = code;
+  updateDots();
 }
 
-// Clear code for current slot
+// Clear code
 function clearCode() {
-  document.getElementById('editor').value = '';
-  document.getElementById('output').srcdoc = '';
-  localStorage.removeItem('slot'+currentSlot);
+  if (!confirm("Clear this slot?")) return;
+
+  document.getElementById("editor").value = "";
+  document.getElementById("output").srcdoc = "";
+  localStorage.removeItem("slot"+currentSlot);
+  updateDots();
 }
 
-// Copy code to clipboard
+// Copy code
 function copyCode() {
-  const code = document.getElementById('editor');
+  const code = document.getElementById("editor");
   code.select();
-  code.setSelectionRange(0, 99999); // For mobile support
-  navigator.clipboard.writeText(code.value).then(() => {
-    alert("Code copied to clipboard!");
-  });
+  code.setSelectionRange(0, 99999);
+  navigator.clipboard.writeText(code.value);
+  alert("Copied!");
 }
 </script>
 
