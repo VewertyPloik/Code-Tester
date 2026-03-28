@@ -283,6 +283,13 @@
     line-height: 1.5;
   }
 
+  .api-key-section {
+    background: #f3f4f6;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border);
+  }
 </style>
 </head>
 <body>
@@ -336,6 +343,16 @@
       <h2 style="margin:0; color: #8b5cf6;">🤖 Code AI Assistant</h2>
       <button class="close-btn" onclick="closeAIModal()">✖</button>
     </div>
+    
+    <div class="api-key-section">
+      <label style="font-size: 13px; font-weight: bold; color: #374151;">Your Groq API Key:</label>
+      <div style="display: flex; gap: 8px; margin-top: 5px;">
+        <input type="password" id="userApiKey" placeholder="gsk_..." style="flex: 1; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+        <button onclick="saveApiKey()" style="background: #4f46e5; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">Save Key</button>
+      </div>
+      <div style="font-size: 11px; color: #6b7280; margin-top: 5px;">Stored safely in your browser. Not sent anywhere except Groq.</div>
+    </div>
+    
     <p style="font-size: 14px; color: #4b5563; margin-top: 0; margin-bottom: 15px;">
       Get a quick analysis on what to add and what to fix in your current code.
     </p>
@@ -359,12 +376,6 @@
 </div>
 
 <script>
-// ==========================================
-// 🔑 PASTE YOUR GROQ API KEY HERE 
-// ==========================================
-const GROQ_API_KEY = "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";
-
-
 // --- Source Code Clone Protection (Captured on Load) ---
 const ORIGINAL_SOURCE_CODE = document.documentElement.outerHTML;
 
@@ -651,8 +662,26 @@ function updateTitle() {
 }
 
 // --- AI Assistant Management ---
+
+// Save key to local storage
+function saveApiKey() {
+  const keyInput = document.getElementById('userApiKey').value.trim();
+  if (keyInput) {
+    localStorage.setItem('user_groq_api_key', keyInput);
+    alert('API Key saved securely to your browser!');
+  } else {
+    localStorage.removeItem('user_groq_api_key');
+    alert('API Key removed.');
+  }
+}
+
 function openAIModal() {
   document.getElementById('ai-modal').style.display = 'flex';
+  // Load the key if it exists so the user doesn't have to re-type it
+  const savedKey = localStorage.getItem('user_groq_api_key');
+  if (savedKey) {
+    document.getElementById('userApiKey').value = savedKey;
+  }
 }
 
 function closeAIModal() {
@@ -662,9 +691,12 @@ function closeAIModal() {
 async function askAIToImproveCode() {
   const outputBox = document.getElementById('ai-output');
   const code = document.getElementById('editor').value.trim();
+  
+  // Retrieve the key from local storage instead of a hardcoded variable
+  const userApiKey = localStorage.getItem('user_groq_api_key');
 
-  if (GROQ_API_KEY === "YOUR_GROQ_API_KEY_HERE" || !GROQ_API_KEY) {
-    alert("Please replace 'YOUR_GROQ_API_KEY_HERE' in the script code with your actual API key.");
+  if (!userApiKey) {
+    alert("Please enter and save your Groq API key in the box above first.");
     return;
   }
 
@@ -679,11 +711,11 @@ async function askAIToImproveCode() {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${GROQ_API_KEY}`,
+        "Authorization": `Bearer ${userApiKey}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "openai/gpt-oss-120b",
+        model: "llama3-8b-8192", // Updated to a valid Groq model
         messages: [
           {
             role: "user",
@@ -694,7 +726,6 @@ async function askAIToImproveCode() {
         max_completion_tokens: 8192,
         top_p: 1,
         stream: true,
-        reasoning_effort: "medium",
         stop: null
       })
     });
@@ -734,7 +765,7 @@ async function askAIToImproveCode() {
       }
     }
   } catch (error) {
-    outputBox.innerText += `\n\n❌ Connection Failed, Script is too long for ai to analyze, try a shorter script.`;
+    outputBox.innerText += `\n\n❌ Connection Failed. Make sure your API key is valid.`;
   }
 }
 
